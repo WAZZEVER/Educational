@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Session Flow Tutor</title>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link rel="stylesheet" href="style6.css" />
+    <style>
+      /* Multiple Choice Question Styles */
+      .multiple-choice {
+        margin: 16px 0;
+        padding: 20px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #444;
+      }
+
+      .mc-question {
+        font-size: 15px;
+        font-weight: 500;
+        color: #fff;
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+
+      .mc-options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .mc-option {
+        padding: 12px 16px;
+        background: #1e1e1e;
+        border: 1px solid #555;
+        border-radius: 6px;
+        color: #ddd;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 400;
+        transition: all 0.2s ease;
+        text-align: left;
+      }
+
+      .mc-option:hover {
+        background: #333;
+        border-color: #4f8ef7;
+        color: #fff;
+      }
+
+      .mc-option.selected {
+        background: #4f8ef7;
+        border-color: #4f8ef7;
+        color: white;
+        font-weight: 500;
+      }
+
+      .mc-option.correct {
+        background: #10b981;
+        border-color: #10b981;
+        color: white;
+      }
+
+      .mc-option.incorrect {
+        background: #ef4444;
+        border-color: #ef4444;
+        color: white;
+      }
+
+      .mc-option.disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .mc-explanation {
+        margin-top: 12px;
+        padding: 12px 16px;
+        background: #144d1a;
+        border-radius: 6px;
+        color: #81d8b2;
+        font-size: 14px;
+        border-left: 3px solid #10b981;
+        display: none;
+      }
+
+      .mc-explanation.show {
+        display: block;
+      }
+
+      /* Confidence Check - Updated to be inline */
+      .confidence-check-inline {
+        margin: 16px 0 0 0;
+        padding: 16px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #444;
+      }
+
+      .confidence-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        color: #ddd;
+      }
+
+      .confidence-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .conf-btn {
+        padding: 8px 12px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex: 1;
+        min-width: 80px;
+        background: #1e1e1e;
+        color: #ddd;
+      }
+
+      .conf-btn-high:hover {
+        background: #144d1a;
+        border-color: #10b981;
+        color: #81d8b2;
+      }
+
+      .conf-btn-medium:hover {
+        background: #5a4a10;
+        border-color: #f59e0b;
+        color: #ffdf7e;
+      }
+
+      .conf-btn-low:hover {
+        background: #5a1010;
+        border-color: #ef4444;
+        color: #ff8a8a;
+      }
+
+      @media (max-width: 640px) {
+        .mc-options {
+          gap: 8px;
+        }
+
+        .mc-option {
+          padding: 10px 12px;
+          font-size: 13px;
+        }
+
+        .confidence-buttons {
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .conf-btn {
+          min-width: auto;
+        }
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: "$", right: "$", display: false },
+            { left: "$$", right: "$$", display: true },
+          ],
+          throwOnError: false,
+        });
+      });
+    </script>
+    <script>
+      const sessionData = {
+        topic: "Quadratic Equations",
+        learningGoal:
+          "Understand the standard form $y = ax^2 + bx + c$ and identify a, b, and c.",
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1 class="topic-title">📘 Topic: <span id="topic"></span></h1>
+        <div class="learning-goal" id="learning-goal"></div>
+      </div>
+
+      <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+
+        <form
+          id="chat-form"
+          class="chat-form"
+          autocomplete="off"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          novalidate
+        >
+          <input
+            id="user-input"
+            type="text"
+            class="chat-input"
+            placeholder="Type your answer..."
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            name="user-input"
+          />
+          <button type="submit" class="send-button" aria-label="Send">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m22 2-7 20-4-9-9-4Z" />
+              <path d="M22 2 11 13" />
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <div id="confidence-check" class="confidence-check hidden">
+        <p class="confidence-title">
+          How confident are you with this concept? 😄😐😟
+        </p>
+        <div class="confidence-buttons">
+          <button class="conf-btn conf-btn-high" data-confidence="very">
+            Very confident
+          </button>
+          <button class="conf-btn conf-btn-medium" data-confidence="somewhat">
+            Somewhat confident
+          </button>
+          <button class="conf-btn conf-btn-low" data-confidence="not">
+            Not confident
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let totalEstimatedTokens = 0;
+
+      const confidenceUI = document.getElementById("confidence-check");
+      const confidenceButtons = document.querySelectorAll(".conf-btn");
+
+      function showConfidenceCheck() {
+        confidenceUI.classList.remove("hidden");
+        userInput.disabled = true;
+        userInput.placeholder = "Please choose your confidence level ⬇️";
+      }
+
+      function hideConfidenceCheck() {
+        confidenceUI.classList.add("hidden");
+        userInput.disabled = false;
+        userInput.placeholder = "Type your answer...";
+      }
+
+      confidenceButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const level = btn.dataset.confidence;
+
+          let userFeedback = "";
+          switch (level) {
+            case "very":
+              userFeedback = "I'm very confident.";
+              checklistIndex++; // ✅ Move to the next step
+              break;
+            case "somewhat":
+              userFeedback = "I'm somewhat confident.";
+              break;
+            case "not":
+              userFeedback = "I'm not confident.";
+              break;
+          }
+
+          messages.push({ sender: "user", text: userFeedback });
+          appendMessage("user", userFeedback);
+          hideConfidenceCheck();
+          getAIResponse();
+        });
+      });
+
+      // Function to create inline confidence check
+      function createInlineConfidenceCheck() {
+        const confidenceDiv = document.createElement("div");
+        confidenceDiv.className = "confidence-check-inline";
+        confidenceDiv.innerHTML = `
+          <p class="confidence-title">How confident are you with this concept? 😄😐😟</p>
+          <div class="confidence-buttons">
+            <button class="conf-btn conf-btn-high" data-confidence="very">Very confident</button>
+            <button class="conf-btn conf-btn-medium" data-confidence="somewhat">Somewhat confident</button>
+            <button class="conf-btn conf-btn-low" data-confidence="not">Not confident</button>
+          </div>
+        `;
+
+        return confidenceDiv;
+      }
+
+      // Function to handle confidence button clicks
+      function handleConfidenceClick(event, confidenceDiv) {
+        const level = event.target.dataset.confidence;
+
+        let userFeedback = "";
+        switch (level) {
+          case "very":
+            userFeedback = "I'm very confident.";
+            checklistIndex++; // Move to the next step
+            break;
+          case "somewhat":
+            userFeedback = "I'm somewhat confident.";
+            break;
+          case "not":
+            userFeedback = "I'm not confident.";
+            break;
+        }
+
+        // Remove the confidence check
+        confidenceDiv.remove();
+
+        // Add user response and continue
+        messages.push({ sender: "user", text: userFeedback });
+        appendMessage("user", userFeedback);
+
+        // Re-enable input
+        userInput.disabled = false;
+        userInput.placeholder = "Type your answer...";
+
+        getAIResponse();
+      }
+
+      // Function to parse and create multiple choice questions
+      // Updated parseMultipleChoice function to handle markdown code blocks
+      function parseMultipleChoice(text) {
+        // First, extract JSON from markdown code blocks (```json or `json)
+        const codeBlockRegex =
+          /```json\s*([\s\S]*?)\s*```|`json\s*([\s\S]*?)\s*`/g;
+        let cleanText = text;
+        const mcQuestions = [];
+
+        // Find all code blocks with json
+        let match;
+        while ((match = codeBlockRegex.exec(text)) !== null) {
+          const jsonString = match[1] || match[2]; // Get the captured JSON content
+
+          try {
+            const mcData = JSON.parse(jsonString.trim());
+            if (mcData.type === "multiple_choice") {
+              mcQuestions.push(mcData);
+              // Remove the entire code block from the text
+              cleanText = cleanText.replace(match[0], "").trim();
+            }
+          } catch (e) {
+            console.error(
+              "Error parsing multiple choice JSON from code block:",
+              e,
+            );
+          }
+        }
+
+        // Also check for direct JSON (without code blocks) as fallback
+        if (mcQuestions.length === 0) {
+          const directJsonRegex =
+            /\{[\s\S]*?"type":\s*"multiple_choice"[\s\S]*?\}/g;
+          const directMatches = cleanText.match(directJsonRegex);
+
+          if (directMatches) {
+            directMatches.forEach((jsonMatch) => {
+              try {
+                const mcData = JSON.parse(jsonMatch);
+                if (mcData.type === "multiple_choice") {
+                  mcQuestions.push(mcData);
+                  cleanText = cleanText.replace(jsonMatch, "").trim();
+                }
+              } catch (e) {
+                console.error("Error parsing direct multiple choice JSON:", e);
+              }
+            });
+          }
+        }
+
+        // Clean up any remaining empty code blocks or stray backticks
+        cleanText = cleanText
+          .replace(/```json\s*```/g, "") // Remove empty json code blocks
+          .replace(/`json\s*`/g, "") // Remove empty json inline code
+          .replace(/```\s*```/g, "") // Remove any other empty code blocks
+          .replace(/\n\s*\n\s*\n/g, "\n\n") // Clean up multiple empty lines
+          .trim();
+
+        return { cleanText, mcQuestions };
+      }
+
+      // Function to create multiple choice UI
+      function createMultipleChoiceUI(mcData, messageDiv) {
+        const mcDiv = document.createElement("div");
+        mcDiv.className = "multiple-choice";
+
+        const questionDiv = document.createElement("div");
+        questionDiv.className = "mc-question";
+        questionDiv.textContent = mcData.question;
+        mcDiv.appendChild(questionDiv);
+
+        const optionsDiv = document.createElement("div");
+        optionsDiv.className = "mc-options";
+
+        mcData.options.forEach((option, index) => {
+          const optionBtn = document.createElement("button");
+          optionBtn.className = "mc-option";
+          optionBtn.textContent = option;
+          optionBtn.onclick = () =>
+            handleMultipleChoiceClick(optionBtn, index, mcData, mcDiv);
+          optionsDiv.appendChild(optionBtn);
+        });
+
+        mcDiv.appendChild(optionsDiv);
+
+        if (mcData.explanation) {
+          const explanationDiv = document.createElement("div");
+          explanationDiv.className = "mc-explanation";
+          explanationDiv.textContent = mcData.explanation;
+          mcDiv.appendChild(explanationDiv);
+        }
+
+        messageDiv.appendChild(mcDiv);
+      }
+
+      // Function to handle multiple choice option clicks
+      function handleMultipleChoiceClick(
+        clickedBtn,
+        selectedIndex,
+        mcData,
+        mcDiv,
+      ) {
+        const options = mcDiv.querySelectorAll(".mc-option");
+        const explanation = mcDiv.querySelector(".mc-explanation");
+
+        // Disable all options
+        options.forEach((btn) => {
+          btn.classList.add("disabled");
+          btn.onclick = null;
+        });
+
+        // Mark the selected option
+        clickedBtn.classList.add("selected");
+
+        // Show correct/incorrect
+        const isCorrect = selectedIndex === mcData.correct;
+
+        if (isCorrect) {
+          clickedBtn.classList.add("correct");
+          clickedBtn.classList.remove("selected");
+        } else {
+          clickedBtn.classList.add("incorrect");
+          // Also highlight the correct answer
+          options[mcData.correct].classList.add("correct");
+        }
+
+        // Show explanation if available
+        if (explanation) {
+          explanation.classList.add("show");
+        }
+
+        // Add user response to messages
+        const userResponse = `Selected: ${mcData.options[selectedIndex]}`;
+        messages.push({ sender: "user", text: userResponse });
+
+        // Continue with AI response after a short delay
+        setTimeout(() => {
+          getAIResponse();
+        }, 1500);
+      }
+
+      const topicEl = document.getElementById("topic");
+      const goalEl = document.getElementById("learning-goal");
+      const chatBox = document.getElementById("chat-box");
+      const chatForm = document.getElementById("chat-form");
+      const userInput = document.getElementById("user-input");
+
+      topicEl.textContent = sessionData.topic;
+      goalEl.innerHTML = sessionData.learningGoal;
+      renderMathInElement(goalEl, {
+        delimiters: [
+          { left: "$", right: "$", display: false },
+          { left: "$$", right: "$$", display: true },
+        ],
+        throwOnError: false,
+      });
+
+      const messages = [];
+
+      const checklist = [
+        {
+          step: 1,
+          title: "Identifying Coefficients",
+          goal: "Student can identify the values of a, b, and c in a quadratic equation.",
+          concept: "Coefficients in standard form: $ax^2 + bx + c = 0$",
+          keywords: ["coefficient", "a", "b", "c", "quadratic equation"],
+          example: "$2x^2 + 3x - 5 = 0$",
+        },
+        {
+          step: 2,
+          title: "Graph Shape Based on Coefficient a",
+          goal: "Student understands how the value of a affects the parabola's direction and width.",
+          concept:
+            "The sign and magnitude of 'a' affect whether the parabola opens up/down and how wide/narrow it is.",
+          keywords: ["graph", "a", "parabola", "open up", "open down"],
+          example: "$y = 2x^2$ vs $y = -0.5x^2$",
+        },
+      ];
+      let checklistIndex = 0;
+
+      function handleSessionEnd() {
+        const doneMessage = document.createElement("div");
+        doneMessage.className = "session-complete";
+        doneMessage.innerHTML = `
+                🎉 <strong>Session complete!</strong> Great job!<br>
+                🧮 <strong>Estimated total tokens used:</strong> ${totalEstimatedTokens}
+              `;
+        chatBox.appendChild(doneMessage);
+
+        userInput.disabled = true;
+        userInput.placeholder = "Session has ended.";
+
+        confidenceUI.classList.add("hidden");
+      }
+
+      chatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        messages.push({ sender: "user", text });
+        appendMessage("user", text);
+        userInput.value = "";
+
+        // Don't increment checklist here! AI controls progression now.
+        getAIResponse();
+      });
+
+      // Enhanced message parsing for Notion-like formatting
+      function parseNotionFormat(text) {
+        // Replace Notion-like syntax with HTML
+        text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"); // Bold
+        text = text.replace(/\*(.*?)\*/g, "<em>$1</em>"); // Italic
+        text = text.replace(/==(.*?)==/g, '<mark class="highlight">$1</mark>'); // Highlight
+        text = text.replace(/`(.*?)`/g, '<code class="inline-code">$1</code>'); // Inline code
+
+        // Callout blocks
+        text = text.replace(
+          /\[!callout\](.*?)(?=\n\n|\n$|$)/gs,
+          '<div class="callout callout-info">$1</div>',
+        );
+        text = text.replace(
+          /\[!warning\](.*?)(?=\n\n|\n$|$)/gs,
+          '<div class="callout callout-warning">$1</div>',
+        );
+        text = text.replace(
+          /\[!tip\](.*?)(?=\n\n|\n$|$)/gs,
+          '<div class="callout callout-tip">$1</div>',
+        );
+        text = text.replace(
+          /\[!important\](.*?)(?=\n\n|\n$|$)/gs,
+          '<div class="callout callout-important">$1</div>',
+        );
+
+        // Quote blocks
+        text = text.replace(
+          /^> (.*?)$/gm,
+          '<blockquote class="quote-block">$1</blockquote>',
+        );
+
+        return text;
+      }
+
+      function appendMessage(sender, text) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${sender === "ai" ? "message-ai" : "message-user"}`;
+
+        if (sender === "ai") {
+          // Parse multiple choice questions first
+          const { cleanText, mcQuestions } = parseMultipleChoice(text);
+
+          // Parse Notion-like formatting
+          const formattedText = parseNotionFormat(cleanText);
+          // Then parse markdown
+          msgDiv.innerHTML = marked.parse(formattedText);
+
+          // Add multiple choice questions
+          mcQuestions.forEach((mcData) => {
+            createMultipleChoiceUI(mcData, msgDiv);
+          });
+        } else {
+          msgDiv.innerHTML = marked.parse(text);
+        }
+
+        // Render LaTeX after Markdown is added
+        renderMathInElement(msgDiv, {
+          delimiters: [
+            { left: "$", right: "$", display: false },
+            { left: "$$", right: "$$", display: true },
+          ],
+          throwOnError: false,
+        });
+
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      async function getAIResponse() {
+        const history = messages
+          .map(
+            (msg) => `${msg.sender === "ai" ? "AI:" : "Student:"} ${msg.text}`,
+          )
+          .join("\n");
+
+        const step = checklist[checklistIndex];
+        console.log(`🧭 Teaching Step ${step.step}: ${step.title}`);
+
+        const prompt = `
+          🎯 Topic: ${sessionData.topic}
+          🧠 Learning Goal: ${sessionData.learningGoal}
+
+          You are now teaching:
+
+          Step ${step.step}: **${step.title}**
+          - Goal: ${step.goal}
+          - Concept: ${step.concept}
+          - Keywords: ${step.keywords.join(", ")}
+          - Example: ${step.example}
+
+          Conversation so far:
+          ${history}
+
+          Continue with the next teaching message for **step ${step.step}**.
+
+          ⚠️ Remember:
+          - Do ONE thing only: explain, give example, ask a question, OR create multiple choice.
+          - Use multiple choice JSON format when you want to test specific knowledge.
+          - Do NOT give \`NEXT_STEP\` yet unless student has clearly demonstrated mastery.
+          - Be warm and supportive.
+        `;
+
+        try {
+          const estimatedTokens = Math.ceil(prompt.split(/\s+/).length * 1.5);
+          totalEstimatedTokens += estimatedTokens;
+
+          const res = await axios.post("/session-teach", { prompt });
+
+          const { response: aiText, tokens } = res.data;
+          messages.push({ sender: "ai", text: aiText });
+          appendMessage("ai", aiText);
+
+          if (tokens) {
+            console.log(
+              `📊 Tokens used — input: ${tokens.input}, output: ${tokens.output}, total: ${tokens.total}`,
+            );
+            totalEstimatedTokens += tokens.total;
+          }
+
+          if (aiText.includes("3$%6&")) {
+            handleSessionEnd();
+            return;
+          }
+
+          if (aiText.includes("NEXT_STEP")) {
+            console.log("📍 NEXT_STEP detected");
+
+            // Check if we're at the last checklist step
+            if (checklistIndex >= checklist.length - 1) {
+              console.log("✅ Last step reached — ending session");
+              handleSessionEnd();
+              return;
+            }
+
+            // Create and append inline confidence check to the last AI message
+            const lastAiMessage = chatBox.querySelector(
+              ".message-ai:last-child",
+            );
+            if (lastAiMessage) {
+              const confidenceDiv = createInlineConfidenceCheck();
+
+              // Add event listeners to confidence buttons
+              const confButtons = confidenceDiv.querySelectorAll(".conf-btn");
+              confButtons.forEach((btn) => {
+                btn.addEventListener("click", (e) =>
+                  handleConfidenceClick(e, confidenceDiv),
+                );
+              });
+
+              lastAiMessage.appendChild(confidenceDiv);
+
+              // Disable input while confidence check is active
+              userInput.disabled = true;
+              userInput.placeholder = "Please choose your confidence level ⬇️";
+            }
+
+            return;
+          }
+        } catch (err) {
+          appendMessage("ai", "❌ Error getting response from AI.");
+          console.error(err);
+        }
+      }
+
+      // Start session with initial AI message
+      window.addEventListener("load", () => {
+        messages.push({ sender: "system", text: "Session started." });
+        getAIResponse(); // This triggers checklist generation first
+      });
+    </script>
+  </body>
+</html>
